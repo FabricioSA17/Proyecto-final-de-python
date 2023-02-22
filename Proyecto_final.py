@@ -62,6 +62,36 @@ class Tanque:
         self.historial_TM = []
         self.historial_TL = []
         self.historial_P = []
+
+    def y_dot(self, t: float, y: np.ndarray) -> np.ndarray:
+        '''
+        Devuelve derivada del vector de estados.
         
+        y: array unidimensional
+        '''
+        
+        TH, TM, TL = y
+
+        Qh1 = self.Pnom if self.estado_H == 'ON' else 0
+        Qh2 = self.Pnom if self.estado_L == 'ON' else 0
+
+        Qf1 = self.Ks2*TM - self.Ks1*TH
+        TH_dot = (1/self.Cp1) * (  self.p*self.Wr*self.cp*(TM - TH) \
+                                 + self.Gsc1*(self.Tamb - TH) \
+                                 + Qf1 + Qh1)
+        
+        Qf2 = self.Ks1*TH + self.Ks3*TL - 2*self.Ks2*TM
+        TM_dot = (1/self.Cp2) * (  self.p*self.Wr*self.cp*(TL - TM) \
+                                 + self.Gsc2*(self.Tamb - TM) \
+                                 + Qf2)
+            
+        Qf3 = self.Ks2*TM - self.Ks3*TL
+        TL_dot = (1/self.Cp3) * (  self.p*self.Wr*self.cp*(self.Tin - TL) \
+                                 + self.Gsc3*(self.Tamb - TL) \
+                                 + Qf3 + Qh2)
+        
+        return np.array([TH_dot,
+                         TM_dot,
+                         TL_dot])    
 
     
