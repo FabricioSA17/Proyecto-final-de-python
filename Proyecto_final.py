@@ -94,4 +94,71 @@ class Tanque:
                          TM_dot,
                          TL_dot])    
 
-    
+    def solve_until(self, tf: float, h: float = 30) -> None:
+        
+        N = tf // h
+        y_res = np.empty([3, N])
+        y_res[:, 0] = self.y0
+
+        for i in range(N-1):
+            # Extraer temperaturas
+            self.t += h
+            yi = y_res[:, i]
+            THi, TMi, TLi = yi
+            self.historial_TH.append(THi)
+            self.historial_TM.append(TMi)
+            self.historial_TL.append(TLi)
+            self.historial_t.append(self.t)
+            
+            # Actualizar termostato maestro
+            if self.estado_H == 'ON' and THi > self.Ts:
+                self.estado_H = 'OFF'
+
+            elif self.estado_H == 'OFF' and THi < self.Ts - self.TdbH:
+                self.estado_H = 'ON'
+
+            # Actualizar termostato esclavo:
+            # Si está encendido...
+            if self.estado_L == 'ON':
+                # y ya calentó lo suficiente...
+                if TLi > self.Ts:
+                    # apáguese
+                    self.estado_L = 'OFF'
+                
+                # y no ha calentado lo suficiente pero el maestro se enciende...
+                elif self.estado_H == 'ON':
+                    # dele campo a él y espere
+                    self.estado_L = 'WAITING'
+
+            # Si está apagado...  
+            elif self.estado_L == 'OFF':
+                # Si debe encenderse y el maestro se lo permite
+                if TLi < self.Ts - self.TdbL and self.estado_H == 'OFF':
+                    # Enciéndase
+                    self.estado_L = 'ON'
+
+                # Si debe encenderse pero el maestro NO se lo permite
+                elif TLi < self.Ts - self.TdbL and self.estado_H == 'ON':
+                    # A esperar...
+                    self.estado_L = 'WAITING'
+
+            # Si está esperando...
+            elif self.estado_L == 'WAITING':
+                # y el maestro finalmente le permite encenderse...
+                if self.estado_H == 'OFF':
+                    # enciéndase
+                    self.estado_L = 'ON'
+                
+            # Guardar la potencia
+            if self.estado_H == 'ON' or self.estado_L == 'ON':
+                self.historial_P.append(self.Pnom)
+            else:
+                self.historial_P.append(0)
+            
+            # Actualizar variables continuas
+            k1 = self.y_dot(t=None, y=yi)
+            k2 = self.y_dot(t=None, y=yi + 0.5*h*k1)
+            k3 = self.y_dot(t=None, y=yi + 0.5*h*k2)
+            k4 = self.y_dot(t=None, y=yi + 1.0*h*k3)
+            
+            y_res[:, i+1] = yi + (h/6) * (k1 + 2*k2 + 2*k3 + k4)
