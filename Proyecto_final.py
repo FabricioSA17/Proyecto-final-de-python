@@ -27,16 +27,6 @@ class Tanque:
         self.Qh2 = self.Pnom if self.estado_L == 'ON' else 0
         
         # Parámetros constructivos
-        Cp1 = 2.531e5
-        Cp2 = 2.531e5
-        Cp3 = 2.531e5
-        Gsc1 = 0.5265
-        Gsc2 = 0.5263
-        Gsc3 = 0.5265
-        Ks1 = 0.4134
-        Ks2 = 0.4106
-        Ks3 = 0.4123
-        
         self.Cp1 = 250235.83740734213
         self.Cp2 = self.Cp1#random.uniform(Cp2*0.9, Cp2*1.1)
         self.Cp3 = self.Cp1#random.uniform(Cp3*0.9, Cp3*1.1)
@@ -162,3 +152,71 @@ class Tanque:
             k4 = self.y_dot(t=None, y=yi + 1.0*h*k3)
             
             y_res[:, i+1] = yi + (h/6) * (k1 + 2*k2 + 2*k3 + k4)
+            
+# Definir las condiciones iniciales y el tiempo de integración
+# Punto 1
+horas = 12  
+horizonte = horas * 60 * 60
+
+'''
+Creación del objeto tanque
+'''
+tanque = Tanque(Tamb=20)
+sol_tanque = tanque.solve_until(horizonte, h=1)
+
+plt.figure(0)
+plt.plot(tanque.historial_t, tanque.historial_TH, label='th')
+plt.plot(tanque.historial_t, tanque.historial_TM, label='tm')
+plt.plot(tanque.historial_t, tanque.historial_TL, label='tl')
+plt.legend()
+plt.xlabel('Tiempo (h)')
+plt.ylabel('Temperatura (grados C)')
+
+# Punto 2
+plt.figure(1)
+plt.plot(tanque.historial_t, tanque.historial_P)
+plt.xlabel('Tiempo (h)')
+plt.ylabel('Potencia (kW)')
+plt.show()
+
+
+# Punto 3
+calentadores = [Tanque(Tamb=random.choice([20, 40])) for i in range(5)]
+
+for i, calentador in enumerate(calentadores):
+    print(f'Resolviendo calentador número {i}')
+    calentador.solve_until(horizonte, h=30)
+    plt.figure(2)
+    # plt.plot(calentador.historial_t, calentador.historial_TH, label='TH')
+    # plt.plot(calentador.historial_t, calentador.historial_TM, label='TM')
+    # plt.plot(calentador.historial_t, calentador.historial_TL, label='TL')
+    plt.plot(calentador.historial_t,
+             calentador.historial_P, label=f'Pot_cal {i}')
+plt.xlabel('Tiempo (s)')
+plt.ylabel('Potencia (kW)')
+plt.legend()
+plt.show()
+
+
+# Punto 4
+temperaturas = np.arange(50, 65, 5)
+TH_resultado = []
+TM_resultado = []
+TL_resultado = []
+
+for Tamb in temperaturas:
+    tanque = Tanque(Tamb)
+    tanque.solve_until(246060, h=60)
+    TH_resultado.append(tanque.historial_TH)
+    TM_resultado.append(tanque.historial_TM)
+    TL_resultado.append(tanque.historial_TL)
+
+for i in range(len(temperaturas)):
+    plt.figure(3)
+    plt.plot(tanque.historial_t,
+             TH_resultado[i], label=f'Tamb={temperaturas[i]}°C')
+plt.title('Temperaturas ambiente')
+plt.xlabel('Tiempo (s)')
+plt.ylabel('Temperatura (°C)')
+plt.legend()
+plt.show()
